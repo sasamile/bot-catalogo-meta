@@ -263,6 +263,7 @@ export default defineSchema({
         fechaEntrada: v.number(),
         fechaSalida: v.number(),
         minCapacity: v.optional(v.number()),
+        sortByPrice: v.optional(v.boolean()),
       })
     ),
     createdAt: v.number(),

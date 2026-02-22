@@ -25,6 +25,7 @@ export const setLastCatalogSent = internalMutation({
     fechaEntrada: v.number(),
     fechaSalida: v.number(),
     minCapacity: v.optional(v.number()),
+    sortByPrice: v.optional(v.boolean()),
   },
   handler: async (ctx, args) => {
     await ctx.db.patch(args.conversationId, {
@@ -34,6 +35,7 @@ export const setLastCatalogSent = internalMutation({
         fechaEntrada: args.fechaEntrada,
         fechaSalida: args.fechaSalida,
         minCapacity: args.minCapacity,
+        sortByPrice: args.sortByPrice,
       },
     });
   },

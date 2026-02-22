@@ -220,8 +220,15 @@ export const getByCode = query({
   },
 });
 
+const SEARCH_STOPWORDS = new Set([
+  "estoy", "buscando", "en", "una", "para", "el", "la", "los", "las", "que", "más", "mas", "personas",
+  "grupo", "amigos", "dame", "buen", "precio", "este", "fin", "de", "semana", "viene",
+  "o", "y", "con", "del", "al", "por", "necesito", "quiero", "ver", "opciones", "me", "gusta", "gustan",
+]);
+
 /**
- * Buscar fincas por texto
+ * Buscar fincas por texto. Acepta mensajes largos: extrae palabras clave y devuelve fincas que coincidan con alguna.
+ * Ej: "Estoy buscando en Melgar una Finca para 5 personas" → coincide con ubicación/nombre que contenga "melgar".
  */
 export const search = query({
   args: {
@@ -230,19 +237,28 @@ export const search = query({
   },
   handler: async (ctx, args) => {
     const limit = args.limit ?? 20;
-    const searchTerm = args.query.toLowerCase();
+    const input = args.query
+      .toLowerCase()
+      .replace(/[^\wáéíóúñ\s]/g, " ")
+      .replace(/\s+/g, " ")
+      .trim();
+    const words = input.split(" ").filter((w) => w.length >= 2 && !SEARCH_STOPWORDS.has(w));
+    const searchTerms = words.length > 0 ? words : [input.slice(0, 50)];
 
     const allProperties = await ctx.db.query("properties").collect();
 
-    // Buscar en título, descripción, ubicación y código
+    const lower = (s: string) => s.toLowerCase();
+    const matchesTerm = (p: (typeof allProperties)[number], term: string) =>
+      lower(p.title).includes(term) ||
+      lower(p.description ?? "").includes(term) ||
+      lower(p.location).includes(term) ||
+      (p.code && lower(p.code).includes(term));
+    const countMatches = (p: (typeof allProperties)[number]) =>
+      searchTerms.filter((term) => matchesTerm(p, term)).length;
+
     const filtered = allProperties
-      .filter(
-        (p) =>
-          p.title.toLowerCase().includes(searchTerm) ||
-          p.description.toLowerCase().includes(searchTerm) ||
-          p.location.toLowerCase().includes(searchTerm) ||
-          (p.code && p.code.toLowerCase().includes(searchTerm))
-      )
+      .filter((p) => searchTerms.some((term) => matchesTerm(p, term)))
+      .sort((a, b) => countMatches(b) - countMatches(a))
       .slice(0, limit);
 
     const propertiesWithDetails = await Promise.all(
@@ -266,6 +282,7 @@ export const search = query({
 /**
  * Fincas disponibles por ubicación y rango de fechas (para enviar catálogo WhatsApp).
  * Solo incluye fincas que están en al menos un catálogo (propertyWhatsAppCatalog) y sin reservas que solapen.
+ * Opcional: filtrar por capacidad mínima, excluir IDs ya enviados, ordenar por precio.
  */
 export const searchAvailableByLocationAndDates = query({
   args: {
@@ -273,22 +290,31 @@ export const searchAvailableByLocationAndDates = query({
     fechaEntrada: v.number(),
     fechaSalida: v.number(),
     limit: v.optional(v.number()),
+    minCapacity: v.optional(v.number()),
+    excludePropertyIds: v.optional(v.array(v.id("properties"))),
+    sortByPrice: v.optional(v.boolean()),
   },
   handler: async (ctx, args) => {
-    const limit = args.limit ?? 4;
+    const limit = args.limit ?? 3;
     const locLower = args.location.trim().toLowerCase();
     if (!locLower) return [];
 
     const inCatalogIds = new Set(
       (await ctx.db.query("propertyWhatsAppCatalog").collect()).map((r) => r.propertyId)
     );
+    const excludeSet = new Set(args.excludePropertyIds ?? []);
     const all = await ctx.db.query("properties").collect();
-    const byLocation = all.filter(
+    let byLocation = all.filter(
       (p) =>
-        p.location.toLowerCase().includes(locLower) && inCatalogIds.has(p._id)
+        p.location.toLowerCase().includes(locLower) &&
+        inCatalogIds.has(p._id) &&
+        !excludeSet.has(p._id)
     );
+    if (args.minCapacity != null) {
+      byLocation = byLocation.filter((p) => p.capacity >= args.minCapacity!);
+    }
 
-    const result: Array<{ _id: (typeof all)[number]["_id"]; title: string }> = [];
+    const result: Array<{ _id: (typeof all)[number]["_id"]; title: string; priceBase?: number }> = [];
 
     for (const p of byLocation) {
       const bookings = await ctx.db
@@ -302,12 +328,14 @@ export const searchAvailableByLocationAndDates = query({
           b.fechaSalida > args.fechaEntrada
       );
       if (!overlap) {
-        result.push({ _id: p._id, title: p.title });
-        if (result.length >= limit) break;
+        result.push({ _id: p._id, title: p.title, priceBase: p.priceBase });
       }
     }
 
-    return result;
+    if (args.sortByPrice) {
+      result.sort((a, b) => (a.priceBase ?? 0) - (b.priceBase ?? 0));
+    }
+    return result.slice(0, limit).map(({ _id, title }) => ({ _id, title }));
   },
 });
 
