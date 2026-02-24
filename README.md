@@ -2,89 +2,78 @@
 
 Sistema de gestión de fincas con Convex y Better Auth.
 
+## Estructura
+
+```
+convexfincas/
+├── convex/         # Backend Convex (DB, RAG, auth, webhooks)
+├── src/            # API REST NestJS
+├── scripts/        # Scripts de utilidad (importar-fincas)
+├── postman/        # Colecciones Postman
+└── package.json    # Un solo package.json con todo
+```
+
 ## Configuración Inicial
 
 ### 1. Instalar dependencias
 
 ```bash
-npm install
+bun install
 ```
 
-https://adventurous-octopus-651.convex.site/webhooks/ycloud
+### 2. Variables de entorno
 
-### 2. Crear proyecto Convex
+Crea `.env` o `.env.local` en la raíz. Variables: `CONVEX_URL`, `CONVEX_SITE_URL`, `BETTER_AUTH_SECRET`, `SITE_URL`, `OPENAI_API_KEY`, etc.
+
+### 3. Convex (primera vez)
 
 ```bash
-npx convex dev
+bunx convex dev
 ```
 
-Cuando se te pregunte sobre autenticación, elige "none".
+Cuando se te pregunte sobre autenticación, elige "none". Si ya está configurado, se conectará automáticamente.
 
-### 3. Configurar variables de entorno
-
-#### En Convex (usando CLI):
+### 4. Configurar variables en Convex
 
 ```bash
-# Generar secret para Better Auth
-npx convex env set BETTER_AUTH_SECRET=$(openssl rand -base64 32)
-
-# Configurar URL del sitio
-npx convex env set SITE_URL=http://localhost:3000
-
-# WhatsApp (YCloud) - para webhook y respuestas automáticas
-
+bunx convex env set BETTER_AUTH_SECRET=$(openssl rand -base64 32)
+bunx convex env set SITE_URL=http://localhost:3000
+bunx convex env set OPENAI_API_KEY=sk-...
+# YCloud: YCLOUD_API_KEY, YCLOUD_WABA_NUMBER
 ```
 
-#### En archivo local (.env.local):
-
-Copia `.env.local.example` a `.env.local` y completa con tus valores de Convex.
-
-### 4. Generar esquema de Better Auth
+### 5. Generar esquema de Better Auth
 
 ```bash
-npx @better-auth/cli generate --config ./convex/betterAuth/auth.ts --output ./convex/betterAuth/schema.ts
-```
-
-## Estructura del Proyecto
-
-```
-convexfincas/
-├── convex/
-│   ├── schema.ts              # Esquema de datos de Convex
-│   ├── convex.config.ts        # Configuración principal de Convex
-│   ├── auth.config.ts          # Configuración de Better Auth
-│   ├── http.ts                 # Rutas HTTP para Better Auth
-│   ├── auth.ts                 # Funciones de autenticación
-│   ├── fincas.ts               # Funciones CRUD de fincas
-│   ├── knowledge.ts             # RAG: list, addFile, addText, search, indexFincas, deleteFile
-│   ├── rag.ts                  # Instancia RAG (embeddings OpenAI)
-│   ├── lib/
-│   │   └── extractTextContent.ts  # Extracción de texto (PDF, imágenes, texto)
-│   └── betterAuth/
-│       ├── convex.config.ts    # Componente Better Auth
-│       ├── auth.ts             # Instancia de Better Auth
-│       ├── schema.ts           # Esquema generado de Better Auth
-│       └── adapter.ts          # Adaptador de Better Auth
-└── package.json
+bunx @better-auth/cli generate --config ./convex/betterAuth/auth.ts --output ./convex/betterAuth/schema.ts
 ```
 
 ## Uso
 
-### Desarrollo
+### Desarrollo: Convex + NestJS al mismo tiempo
 
 ```bash
-npm run dev
+bun run dev
 ```
 
-Esto iniciará `convex dev` que:
-- Mantiene tu deployment sincronizado
-- Genera tipos TypeScript automáticamente
-- Proporciona logs en tiempo real
+Inicia **Convex** y **API NestJS** en paralelo (Convex en modo dev, API en http://localhost:3001/api).
 
-### Desplegar
+### Solo Convex
 
 ```bash
-npm run deploy
+bun run dev:convex
+```
+
+### Solo API NestJS
+
+```bash
+bun run dev:api
+```
+
+### Desplegar Convex
+
+```bash
+bun run deploy
 ```
 
 ## API de Fincas
