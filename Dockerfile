@@ -10,6 +10,9 @@ COPY tsconfig.json tsconfig.build.json ./
 COPY src ./src
 COPY convex ./convex
 
+# Generar tipos de Convex (_generated) para que TypeScript pueda compilar
+RUN bunx convex codegen
+
 RUN bun run build
 
 # Production stage

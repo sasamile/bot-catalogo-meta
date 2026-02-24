@@ -11,7 +11,7 @@ export class ConvexService {
     this.client = new ConvexHttpClient(convexUrl);
   }
 
-  async query(path: string, args: Record<string, unknown> = {}, token?: string): Promise<unknown> {
+  async query(path: string, args: Record<string, unknown> = {}, token?: string): Promise<any> {
     const [module, functionName] = path.split(':');
     const fullPath = (api as any)[module]?.[functionName];
     if (!fullPath) {

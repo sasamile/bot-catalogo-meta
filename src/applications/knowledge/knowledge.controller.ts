@@ -1,15 +1,16 @@
 import {
+  BadRequestException,
   Controller,
   Get,
-  Post,
-  Query,
-  UseInterceptors,
-  UploadedFile,
-  ParseFilePipe,
   MaxFileSizeValidator,
-  BadRequestException,
+  ParseFilePipe,
   Req,
+  UploadedFile,
+  UseInterceptors,
+  Query,
+  Post,
 } from '@nestjs/common';
+import { FileValidator } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { memoryStorage } from 'multer';
 import { Request } from 'express';
@@ -28,7 +29,10 @@ const ALLOWED_MIMES = [
   'image/gif',
 ];
 
-class AllowedMimeValidator {
+class AllowedMimeValidator extends FileValidator<Record<string, any>> {
+  constructor(validationOptions: Record<string, any> = {}) {
+    super(validationOptions);
+  }
   isValid(file?: Express.Multer.File): boolean {
     if (!file) return false;
     const mime = (file.mimetype || '').toLowerCase();
