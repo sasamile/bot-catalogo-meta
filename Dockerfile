@@ -9,6 +9,8 @@ RUN bun install --frozen-lockfile
 COPY tsconfig.json tsconfig.build.json ./
 COPY src ./src
 COPY convex ./convex
+# Asegura que _generated exista aunque se salte codegen
+RUN mkdir -p /app/convex/_generated
 
 # (Opcional) Generar tipos de Convex (_generated) en CI.
 # Solo se ejecuta si hay deployment Y un token de acceso configurado.
