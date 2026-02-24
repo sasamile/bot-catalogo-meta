@@ -31,7 +31,11 @@ jobs:
       - name: Build Docker image
         run: |
           IMAGE=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
-          docker build -t "$IMAGE:latest" -t "$IMAGE:${{ github.sha }}" .
+          docker build \
+            --build-arg CONVEX_DEPLOYMENT=${{ secrets.CONVEX_DEPLOYMENT }} \
+            -t "$IMAGE:latest" \
+            -t "$IMAGE:${{ github.sha }}" \
+            .
 
       - name: Push Docker image
         run: |

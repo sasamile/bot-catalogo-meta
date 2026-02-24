@@ -10,8 +10,10 @@ COPY tsconfig.json tsconfig.build.json ./
 COPY src ./src
 COPY convex ./convex
 
-# Generar tipos de Convex (_generated) para que TypeScript pueda compilar
-RUN bunx convex codegen
+# (Opcional) Generar tipos de Convex (_generated) en CI si hay CONVEX_DEPLOYMENT
+ARG CONVEX_DEPLOYMENT
+ENV CONVEX_DEPLOYMENT=${CONVEX_DEPLOYMENT}
+RUN if [ -n \"$CONVEX_DEPLOYMENT\" ]; then bunx convex codegen; else echo \"Skipping convex codegen (no CONVEX_DEPLOYMENT)\"; fi
 
 RUN bun run build
 
