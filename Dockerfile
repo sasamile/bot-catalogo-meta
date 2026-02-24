@@ -9,21 +9,12 @@ RUN bun install --frozen-lockfile
 COPY tsconfig.json tsconfig.build.json ./
 COPY src ./src
 COPY convex ./convex
-# Asegura que _generated exista aunque se salte codegen
-RUN mkdir -p /app/convex/_generated
 
-# (Opcional) Generar tipos de Convex (_generated) en CI.
-# Solo se ejecuta si hay deployment Y un token de acceso configurado.
-ARG CONVEX_DEPLOYMENT
-ARG CONVEX_ACCESS_TOKEN
-ENV CONVEX_DEPLOYMENT=${CONVEX_DEPLOYMENT}
-ENV CONVEX_ACCESS_TOKEN=${CONVEX_ACCESS_TOKEN}
-RUN sh -c 'if [ -n "$CONVEX_DEPLOYMENT" ] && [ -n "$CONVEX_ACCESS_TOKEN" ]; then \
-  echo "Running convex codegen for $CONVEX_DEPLOYMENT"; \
-  CONVEX_ACCESS_TOKEN="$CONVEX_ACCESS_TOKEN" bunx convex codegen; \
-else \
-  echo "Skipping convex codegen (no CONVEX_DEPLOYMENT or CONVEX_ACCESS_TOKEN)"; \
-fi'
+# Generar convex/_generated SIEMPRE en build (necesario para runtime).
+# BuildKit secret: el deploy key no queda en capas de la imagen.
+RUN --mount=type=secret,id=CONVEX_DEPLOY_KEY \
+  export CONVEX_DEPLOY_KEY="$(cat /run/secrets/CONVEX_DEPLOY_KEY)" && \
+  bunx convex codegen
 
 RUN bun run build
 

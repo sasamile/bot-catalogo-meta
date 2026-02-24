@@ -52,10 +52,13 @@ jobs:
 
       - name: Build Docker image
         run: |
-          docker build \
+          DOCKER_BUILDKIT=1 docker build \
+            --secret id=CONVEX_DEPLOY_KEY,env=CONVEX_DEPLOY_KEY \
             -t "${{ env.IMAGE }}:latest" \
             -t "${{ env.IMAGE }}:${{ github.sha }}" \
             .
+        env:
+          CONVEX_DEPLOY_KEY: ${{ secrets.CONVEX_DEPLOY_KEY }}
 
       - name: Push Docker image
         run: |
