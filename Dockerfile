@@ -43,4 +43,4 @@ COPY --from=builder /app/convex/_generated ./convex/_generated
 
 EXPOSE 3001
 
-CMD ["bun", "run", "start"]
+CMD ["bun", "run", "dev"]
