@@ -98,13 +98,14 @@ export class AuthService {
           email: registerDto.email,
           password: registerDto.password,
           name: registerDto.name,
+          role: 'user', // Por defecto nuevo usuario es "user", nunca "admin"
         }),
         cookies,
         headers: {
           'Origin': process.env.SITE_URL || 'http://localhost:3001',
         },
       });
-      return result;
+      return this.ensureUserRoleInResponse(result);
     } catch (error: any) {
       // Log del error completo para debugging
       console.error('Register error:', error.message);
@@ -125,7 +126,7 @@ export class AuthService {
           'Origin': process.env.SITE_URL || 'http://localhost:3001',
         },
       });
-      return result;
+      return this.ensureUserRoleInResponse(result);
     } catch (error: any) {
       throw new UnauthorizedException(error.message || 'Error al iniciar sesión');
     }
@@ -144,7 +145,8 @@ export class AuthService {
           method: 'GET',
           cookies,
         });
-        return result.data || result;
+        const data = result.data || result;
+        return this.ensureUserRoleInData(data);
       } catch (error: any) {
         // Si Better Auth no tiene endpoint de sesión, usar Convex
         const cookieMatch = cookies.match(/better-auth\.convex_jwt=([^;]+)/);
@@ -153,7 +155,7 @@ export class AuthService {
           this.convexService.setAuth(convexJwt);
           const user = await this.convexService.query('auth:getCurrentUser', {});
           if (user) {
-            return { user, session: { token: convexJwt } };
+            return this.ensureUserRoleInData({ user, session: { token: convexJwt } });
           }
         }
         throw error;
@@ -202,7 +204,7 @@ export class AuthService {
         throw new UnauthorizedException('No se pudo obtener el usuario');
       }
       
-      return user;
+      return this.ensureUserRole(user);
     } catch (error: any) {
       if (error instanceof UnauthorizedException) {
         throw error;
@@ -210,5 +212,40 @@ export class AuthService {
       console.error('GetCurrentUser error:', error.message);
       throw new UnauthorizedException('Error al obtener usuario actual: ' + error.message);
     }
+  }
+
+  /** Asegura que user.role esté definido; por defecto "user". Para getCurrentUser (objeto plano) o { user }. */
+  private ensureUserRole<T>(obj: T): T {
+    if (!obj || typeof obj !== 'object') return obj;
+    const o = obj as Record<string, unknown>;
+    if ('user' in o && o.user && typeof o.user === 'object') {
+      const u = o.user as Record<string, unknown>;
+      if (u.role === undefined || u.role === null) u.role = 'user';
+    } else if (o.role === undefined || o.role === null) {
+      o.role = 'user';
+    }
+    return obj;
+  }
+
+  /** Asegura que user.role esté en la data (sesión o respuesta con user en cualquier nivel). */
+  private ensureUserRoleInData<T extends Record<string, unknown>>(data: T): T {
+    if (data?.user && typeof data.user === 'object') {
+      const u = data.user as Record<string, unknown>;
+      if (u.role === undefined || u.role === null) u.role = 'user';
+    }
+    return data;
+  }
+
+  /** Para respuestas de Better Auth: { data: { user? }, headers } o { user }. */
+  private ensureUserRoleInResponse<T extends Record<string, unknown>>(res: T): T {
+    const data = res?.data;
+    if (data && typeof data === 'object') {
+      this.ensureUserRoleInData(data as Record<string, unknown>);
+    }
+    if (res?.user && typeof res.user === 'object') {
+      const u = res.user as Record<string, unknown>;
+      if (u.role === undefined || u.role === null) u.role = 'user';
+    }
+    return res;
   }
 }

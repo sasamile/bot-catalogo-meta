@@ -75,7 +75,7 @@ export const list = query({
     const hasMore = filtered.length > limit;
     const propertiesToReturn = hasMore ? filtered.slice(0, limit) : filtered;
 
-    // Obtener imágenes y características para cada propiedad
+    // Obtener imágenes, características, temporadas (pricing) y relaciones con catálogos de Meta para cada propiedad
     const propertiesWithDetails = await Promise.all(
       propertiesToReturn.map(async (property: typeof allProperties[number]) => {
         const images = await ctx.db
@@ -88,6 +88,18 @@ export const list = query({
           .withIndex("by_property", (q) => q.eq("propertyId", property._id))
           .collect();
 
+        const pricingRows = await ctx.db
+          .query("propertyPricing")
+          .withIndex("by_property", (q) => q.eq("propertyId", property._id))
+          .collect();
+        const sortedPricing = pricingRows.sort((a, b) => (a.order ?? 999) - (b.order ?? 999));
+
+        const catalogLinks = await ctx.db
+          .query("propertyWhatsAppCatalog")
+          .withIndex("by_property", (q) => q.eq("propertyId", property._id))
+          .collect();
+        const catalogs = await Promise.all(catalogLinks.map((link) => ctx.db.get(link.catalogId)));
+
         // Ordenar imágenes por el campo order
         const sortedImages = images.sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
 
@@ -95,6 +107,44 @@ export const list = query({
           ...property,
           images: sortedImages.map((img) => img.url),
           features: features.map((f) => f.name),
+          pricing: sortedPricing.map((p) => {
+            let condicionesParsed: unknown;
+            if (p.condiciones) {
+              try {
+                condicionesParsed = JSON.parse(p.condiciones);
+              } catch {
+                condicionesParsed = undefined;
+              }
+            }
+            let reglasParsed: unknown;
+            if (p.reglas) {
+              try {
+                reglasParsed = JSON.parse(p.reglas);
+              } catch {
+                reglasParsed = undefined;
+              }
+            }
+            return {
+              id: p._id,
+              nombre: p.nombre,
+              fechaDesde: p.fechaDesde,
+              fechaHasta: p.fechaHasta,
+              valorUnico: p.valorUnico,
+              condiciones: condicionesParsed,
+              activa: p.activa ?? true,
+              reglas: reglasParsed,
+              order: p.order,
+            };
+          }),
+          metaCatalogs: catalogLinks.map((link, index) => {
+            const catalog = catalogs[index];
+            return {
+              catalogId: link.catalogId,
+              productRetailerId: link.productRetailerId,
+              whatsappCatalogId: catalog?.whatsappCatalogId ?? null,
+              catalogName: catalog?.name ?? null,
+            };
+          }),
         };
       })
     );

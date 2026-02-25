@@ -20,6 +20,8 @@ export const tables = {
     createdAt: v.number(),
     updatedAt: v.number(),
     userId: v.optional(v.union(v.null(), v.string())),
+    /** Rol del usuario: "user" (por defecto) o "admin". Usuarios sin rol se tratan como "user". */
+    role: v.optional(v.union(v.literal("user"), v.literal("admin"))),
   })
     .index("email_name", ["email","name"])
     .index("name", ["name"])

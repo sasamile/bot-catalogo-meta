@@ -14,6 +14,7 @@ import {
   ParseFilePipe,
   MaxFileSizeValidator,
   FileTypeValidator,
+  UseGuards,
 } from '@nestjs/common';
 import { FilesInterceptor, FileInterceptor, FileFieldsInterceptor } from '@nestjs/platform-express';
 import { memoryStorage } from 'multer';
@@ -21,6 +22,8 @@ import { FincasService } from './fincas.service';
 import { CreateFincaDto, PricingItemDto } from './dto/create-finca.dto';
 import { UpdateFincaDto } from './dto/update-finca.dto';
 import { ListFincasDto } from './dto/list-fincas.dto';
+import { ConvexAuthGuard } from '../shared/guards/convex-auth.guard';
+import { AdminGuard } from '../shared/guards/admin.guard';
 
 @Controller('fincas')
 export class FincasController {
@@ -54,6 +57,7 @@ export class FincasController {
   }
 
   @Post()
+  @UseGuards(ConvexAuthGuard, AdminGuard)
   @UseInterceptors(
     FileFieldsInterceptor(
       [
@@ -75,6 +79,7 @@ export class FincasController {
   }
 
   @Post('import')
+  @UseGuards(ConvexAuthGuard, AdminGuard)
   @UseInterceptors(
     FileInterceptor('file', {
       storage: memoryStorage(),
@@ -100,6 +105,7 @@ export class FincasController {
   }
 
   @Post(':id/pricing')
+  @UseGuards(ConvexAuthGuard, AdminGuard)
   async addTemporada(
     @Param('id') id: string,
     @Body() body: PricingItemDto,
@@ -108,6 +114,7 @@ export class FincasController {
   }
 
   @Put(':id/pricing')
+  @UseGuards(ConvexAuthGuard, AdminGuard)
   async setPricing(
     @Param('id') id: string,
     @Body() body: { pricing: PricingItemDto[] },
@@ -116,6 +123,7 @@ export class FincasController {
   }
 
   @Patch(':id/pricing/:pricingId')
+  @UseGuards(ConvexAuthGuard, AdminGuard)
   async updateTemporada(
     @Param('pricingId') pricingId: string,
     @Body() body: Partial<PricingItemDto>,
@@ -124,11 +132,13 @@ export class FincasController {
   }
 
   @Delete(':id/pricing/:pricingId')
+  @UseGuards(ConvexAuthGuard, AdminGuard)
   async removeTemporada(@Param('pricingId') pricingId: string) {
     return this.fincasService.removeTemporada(pricingId);
   }
 
   @Put(':id')
+  @UseGuards(ConvexAuthGuard, AdminGuard)
   @UseInterceptors(
     FileFieldsInterceptor(
       [
@@ -153,11 +163,13 @@ export class FincasController {
   }
 
   @Delete(':id')
+  @UseGuards(ConvexAuthGuard, AdminGuard)
   async delete(@Param('id') id: string) {
     return this.fincasService.delete(id);
   }
 
   @Post(':id/images')
+  @UseGuards(ConvexAuthGuard, AdminGuard)
   @UseInterceptors(
     FileInterceptor('image', {
       storage: memoryStorage(),
@@ -180,21 +192,25 @@ export class FincasController {
   }
 
   @Delete('images/:imageId')
+  @UseGuards(ConvexAuthGuard, AdminGuard)
   async removeImage(@Param('imageId') imageId: string) {
     return this.fincasService.removeImage(imageId);
   }
 
   @Post(':id/features')
+  @UseGuards(ConvexAuthGuard, AdminGuard)
   async addFeature(@Param('id') propertyId: string, @Body('name') name: string) {
     return this.fincasService.addFeature(propertyId, name);
   }
 
   @Delete('features/:featureId')
+  @UseGuards(ConvexAuthGuard, AdminGuard)
   async removeFeature(@Param('featureId') featureId: string) {
     return this.fincasService.removeFeature(featureId);
   }
 
   @Post(':id/video')
+  @UseGuards(ConvexAuthGuard, AdminGuard)
   @UseInterceptors(
     FileInterceptor('video', {
       storage: memoryStorage(),
