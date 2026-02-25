@@ -1,0 +1,122 @@
+import {
+  Controller,
+  Get,
+  Post,
+  Patch,
+  Param,
+  Query,
+  Body,
+  UseGuards,
+  UseInterceptors,
+  UploadedFile,
+  BadRequestException,
+} from '@nestjs/common';
+import { FileInterceptor } from '@nestjs/platform-express';
+import { memoryStorage } from 'multer';
+import { InboxService } from './inbox.service';
+import { ConvexAuthGuard } from '../shared/guards/convex-auth.guard';
+import { AdminGuard } from '../shared/guards/admin.guard';
+
+@Controller('inbox')
+@UseGuards(ConvexAuthGuard, AdminGuard)
+export class InboxController {
+  constructor(private readonly inboxService: InboxService) {}
+
+  /**
+   * Listar conversaciones (inbox)
+   * GET /api/inbox?status=human&priority=urgent&limit=50
+   */
+  @Get()
+  async list(
+    @Query('status') status?: 'ai' | 'human' | 'resolved',
+    @Query('priority') priority?: 'urgent' | 'low' | 'medium' | 'resolved',
+    @Query('limit') limit?: string,
+  ) {
+    const limitNum = limit ? parseInt(limit, 10) : undefined;
+    return this.inboxService.listConversations({ status, priority, limit: limitNum });
+  }
+
+  /**
+   * Obtener mensajes de una conversación
+   * GET /api/inbox/:conversationId/messages?limit=50
+   */
+  @Get(':conversationId/messages')
+  async getMessages(
+    @Param('conversationId') conversationId: string,
+    @Query('limit') limit?: string,
+  ) {
+    const limitNum = limit ? parseInt(limit, 10) : undefined;
+    return this.inboxService.getMessages(conversationId, limitNum);
+  }
+
+  /**
+   * Escalar: cambiar entre IA, humano o resuelto
+   * PATCH /api/inbox/:conversationId/status
+   * Body: { "status": "human" } | "ai" | "resolved"
+   */
+  @Patch(':conversationId/status')
+  async setStatus(
+    @Param('conversationId') conversationId: string,
+    @Body() body: { status: 'ai' | 'human' | 'resolved' },
+  ) {
+    if (!body?.status || !['ai', 'human', 'resolved'].includes(body.status)) {
+      throw new BadRequestException('status debe ser ai, human o resolved');
+    }
+    return this.inboxService.setStatus(conversationId, body.status);
+  }
+
+  /**
+   * Clasificar prioridad
+   * PATCH /api/inbox/:conversationId/priority
+   * Body: { "priority": "urgent" } | "low" | "medium" | "resolved"
+   */
+  @Patch(':conversationId/priority')
+  async setPriority(
+    @Param('conversationId') conversationId: string,
+    @Body() body: { priority: 'urgent' | 'low' | 'medium' | 'resolved' },
+  ) {
+    if (!body?.priority || !['urgent', 'low', 'medium', 'resolved'].includes(body.priority)) {
+      throw new BadRequestException('priority debe ser urgent, low, medium o resolved');
+    }
+    return this.inboxService.setPriority(conversationId, body.priority);
+  }
+
+  /**
+   * Enviar mensaje (texto o media)
+   * POST /api/inbox/:conversationId/send
+   * - Texto: Body JSON { "text": "...", "type": "text" }
+   * - Media: Form-data con "file" y "type" (image|audio|document), opcional "text" como caption
+   */
+  @Post(':conversationId/send')
+  @UseInterceptors(
+    FileInterceptor('file', {
+      storage: memoryStorage(),
+      limits: { fileSize: 16 * 1024 * 1024 }, // 16MB
+    }),
+  )
+  async sendMessage(
+    @Param('conversationId') conversationId: string,
+    @Body('text') text?: string,
+    @Body('type') type?: 'text' | 'image' | 'audio' | 'document',
+    @UploadedFile() file?: Express.Multer.File,
+  ) {
+    const msgType = (type || (file ? this.inferTypeFromFile(file) : 'text')) as
+      | 'text'
+      | 'image'
+      | 'audio'
+      | 'document';
+
+    return this.inboxService.sendMessage(conversationId, {
+      type: msgType,
+      text: text?.trim() || undefined,
+      file,
+    });
+  }
+
+  private inferTypeFromFile(file: Express.Multer.File): 'image' | 'audio' | 'document' {
+    const mime = (file.mimetype || '').toLowerCase();
+    if (mime.startsWith('image/')) return 'image';
+    if (mime.startsWith('audio/') || mime.includes('audio')) return 'audio';
+    return 'document';
+  }
+}

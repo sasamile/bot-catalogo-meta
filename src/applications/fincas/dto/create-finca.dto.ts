@@ -105,6 +105,22 @@ export class CreateFincaDto {
   @IsEnum(PropertyType)
   type?: PropertyType;
 
+  /** Si true, la finca aparece en el listado público. Por defecto true. */
+  @IsOptional()
+  @IsBoolean()
+  @Transform(({ value }) =>
+    value === undefined || value === null ? true : value === true || value === 'true' || value === 1
+  )
+  visible?: boolean;
+
+  /** Si true, se puede reservar desde la página web. Por defecto true. */
+  @IsOptional()
+  @IsBoolean()
+  @Transform(({ value }) =>
+    value === undefined || value === null ? true : value === true || value === 'true' || value === 1
+  )
+  reservable?: boolean;
+
   /** En multipart envía varias: -F "features=Piscina" -F "features=BBQ" o JSON string. */
   @IsOptional()
   @IsArray()

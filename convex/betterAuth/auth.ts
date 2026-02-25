@@ -44,7 +44,18 @@ export const createAuthOptions = (ctx: GenericCtx<DataModel>) => {
         },
       },
     },
-    plugins: [convex({ authConfig })],
+    session: {
+      expiresIn: 60 * 60 * 24 * 7, // 7 días
+      updateAge: 60 * 60 * 24, // refrescar cada 24h de uso
+    },
+    plugins: [
+      convex({
+        authConfig,
+        jwt: {
+          expirationSeconds: 60 * 60 * 24, // 1 día (86400 s)
+        },
+      }),
+    ],
   } satisfies BetterAuthOptions;
 };
 

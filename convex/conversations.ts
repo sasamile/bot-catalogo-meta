@@ -107,11 +107,35 @@ export const resolveConversation = mutation({
   },
 });
 
+/** Clasificar prioridad: urgent | low | medium | resolved */
+export const setPriority = mutation({
+  args: {
+    conversationId: v.id("conversations"),
+    priority: v.union(
+      v.literal("urgent"),
+      v.literal("low"),
+      v.literal("medium"),
+      v.literal("resolved")
+    ),
+  },
+  handler: async (ctx, args) => {
+    await ctx.db.patch(args.conversationId, { priority: args.priority });
+  },
+});
+
 /** Listar conversaciones (para inbox). */
 export const list = query({
   args: {
     status: v.optional(
       v.union(v.literal("ai"), v.literal("human"), v.literal("resolved"))
+    ),
+    priority: v.optional(
+      v.union(
+        v.literal("urgent"),
+        v.literal("low"),
+        v.literal("medium"),
+        v.literal("resolved")
+      )
     ),
     limit: v.optional(v.number()),
   },
@@ -123,6 +147,9 @@ export const list = query({
           .withIndex("by_status", (q) => q.eq("status", args.status!))
           .collect()
       : await ctx.db.query("conversations").collect();
+    if (args.priority) {
+      convs = convs.filter((c) => c.priority === args.priority);
+    }
     convs = convs.sort(
       (a, b) =>
         (b.lastMessageAt ?? b.createdAt) - (a.lastMessageAt ?? a.createdAt)

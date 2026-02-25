@@ -55,8 +55,13 @@ export const list = query({
     
     const allProperties = await allPropertiesQuery.collect();
 
+    // Solo mostrar fincas visibles (visible !== false; undefined = visible por compatibilidad)
+    const visibleOnly = allProperties.filter(
+      (p: { visible?: boolean }) => p.visible !== false
+    );
+
     // Aplicar cursor si existe (filtrar manualmente después de obtener los resultados)
-    let filtered = allProperties;
+    let filtered = visibleOnly;
     if (args.cursor) {
       filtered = filtered.filter((p: typeof allProperties[number]) => p._id > args.cursor!);
     }
@@ -105,6 +110,8 @@ export const list = query({
 
         return {
           ...property,
+          visible: property.visible ?? true,
+          reservable: property.reservable ?? true,
           images: sortedImages.map((img) => img.url),
           features: features.map((f) => f.name),
           pricing: sortedPricing.map((p) => {
@@ -308,7 +315,10 @@ export const search = query({
     const countMatches = (p: (typeof allProperties)[number]) =>
       searchTerms.filter((term) => matchesTerm(p, term)).length;
 
-    const filtered = allProperties
+    const visibleProperties = allProperties.filter(
+      (p: { visible?: boolean }) => p.visible !== false
+    );
+    const filtered = visibleProperties
       .filter((p) => searchTerms.some((term) => matchesTerm(p, term)))
       .sort((a, b) => countMatches(b) - countMatches(a))
       .slice(0, limit);
@@ -358,6 +368,7 @@ export const searchAvailableByLocationAndDates = query({
     const all = await ctx.db.query("properties").collect();
     let byLocation = all.filter(
       (p) =>
+        p.visible !== false &&
         p.location.toLowerCase().includes(locLower) &&
         inCatalogIds.has(p._id) &&
         !excludeSet.has(p._id)
@@ -453,6 +464,8 @@ export const create = mutation({
     ),
     /** IDs: Convex _id (m977...) o Meta whatsappCatalogId (26198995209693859). */
     catalogIds: v.optional(v.array(v.string())),
+    visible: v.optional(v.boolean()),
+    reservable: v.optional(v.boolean()),
   },
   handler: async (ctx, args) => {
     const now = Date.now();
@@ -485,6 +498,8 @@ export const create = mutation({
       rating: 0,
       reviewsCount: 0,
       video: args.video,
+      visible: args.visible ?? true,
+      reservable: args.reservable ?? true,
       createdAt: now,
       updatedAt: now,
     });
@@ -598,6 +613,8 @@ export const update = mutation({
       )
     ),
     video: v.optional(v.string()),
+    visible: v.optional(v.boolean()),
+    reservable: v.optional(v.boolean()),
   },
   handler: async (ctx, args) => {
     const { id, ...updates } = args;

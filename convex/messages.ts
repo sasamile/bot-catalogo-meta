@@ -33,6 +33,34 @@ export const insertAssistantMessage = internalMutation({
   },
 });
 
+/** Insertar mensaje del asistente con soporte para media (imagen, audio, documento). */
+export const insertAssistantMessageWithMedia = internalMutation({
+  args: {
+    conversationId: v.id("conversations"),
+    content: v.string(),
+    type: v.optional(
+      v.union(
+        v.literal("text"),
+        v.literal("image"),
+        v.literal("audio"),
+        v.literal("document")
+      )
+    ),
+    mediaUrl: v.optional(v.string()),
+    createdAt: v.number(),
+  },
+  handler: async (ctx, args) => {
+    await ctx.db.insert("messages", {
+      conversationId: args.conversationId,
+      sender: "assistant",
+      content: args.content,
+      type: args.type ?? "text",
+      mediaUrl: args.mediaUrl,
+      createdAt: args.createdAt,
+    });
+  },
+});
+
 export const listRecent = query({
   args: {
     conversationId: v.id("conversations"),

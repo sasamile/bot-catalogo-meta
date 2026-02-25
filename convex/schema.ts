@@ -44,6 +44,10 @@ export default defineSchema({
       v.literal("APARTAMENTO"),
       v.literal("CASA")
     ),
+    /** Si true, la finca aparece en el listado público. */
+    visible: v.optional(v.boolean()),
+    /** Si true, se puede reservar desde la página web. */
+    reservable: v.optional(v.boolean()),
     createdAt: v.number(),
     updatedAt: v.number(),
   })
@@ -253,6 +257,15 @@ export default defineSchema({
       v.literal("human"),
       v.literal("resolved")
     ),
+    /** Prioridad para el inbox: urgente, baja, media, resuelto */
+    priority: v.optional(
+      v.union(
+        v.literal("urgent"),
+        v.literal("low"),
+        v.literal("medium"),
+        v.literal("resolved")
+      )
+    ),
     lastMessageAt: v.optional(v.number()),
     /** Últimas fincas enviadas en catálogo (para "otras opciones") */
     lastSentCatalogPropertyIds: v.optional(v.array(v.id("properties"))),
@@ -270,12 +283,24 @@ export default defineSchema({
   })
     .index("by_contact", ["contactId"])
     .index("by_status", ["status"])
+    .index("by_priority", ["priority"])
     .index("by_last_message", ["lastMessageAt"]),
 
   messages: defineTable({
     conversationId: v.id("conversations"),
     sender: v.union(v.literal("user"), v.literal("assistant")),
     content: v.string(),
+    /** Tipo de mensaje: texto (default), imagen, audio, documento */
+    type: v.optional(
+      v.union(
+        v.literal("text"),
+        v.literal("image"),
+        v.literal("audio"),
+        v.literal("document")
+      )
+    ),
+    /** URL de media cuando type es image/audio/document */
+    mediaUrl: v.optional(v.string()),
     createdAt: v.number(),
   })
     .index("by_conversation", ["conversationId", "createdAt"]),

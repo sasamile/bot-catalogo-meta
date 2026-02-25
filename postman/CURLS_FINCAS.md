@@ -1,6 +1,6 @@
 # Curls para API de Fincas
 
-Base URL: `http://localhost:3001/api`
+Base URL: `{{base_url}}/api` (ej. `http://localhost:3001/api`)
 
 Variables de entorno necesarias para S3 (en `.env` o `.env.local`):
 
@@ -37,14 +37,48 @@ Respuesta: array con `_id`, `name`, `whatsappCatalogId`, etc. Usa `_id` en `cata
 
 ---
 
+## Listar fincas
+
+```bash
+curl -X GET "{{base_url}}/api/fincas?limit=20"
+```
+
+Respuesta: cada propiedad incluye `visible` y `reservable` (booleans). Ejemplo:
+
+```json
+{
+  "hasMore": false,
+  "nextCursor": null,
+  "properties": [
+    {
+      "_id": "js7dyrp4950ea854kwewamyevx81r221",
+      "title": "CASA LOS OCOBOS",
+      "description": "...",
+      "location": "Melgar",
+      "capacity": 12,
+      "visible": true,
+      "reservable": true,
+      "images": ["..."],
+      "pricing": [...],
+      ...
+    }
+  ]
+}
+```
+
+---
+
 ## 1. Crear finca (con imágenes, video, temporadas, catálogos)
 
 Sube imágenes y video a S3. Crea la finca en Convex. Si pasas `catalogIds`, crea el producto en Meta y guarda el retailer_id.
 
-**Campos opcionales:** `features`, `pricing`, `catalogIds`, `images`, `video`, `priceBaja`, `priceMedia`, `priceAlta`, `priceEspeciales`, `code`, `category`, `type`. Si no envías `priceBaja`, `priceMedia` ni `priceAlta`, se usa `priceBase` para todos.
+**Campos opcionales:** `features`, `pricing`, `catalogIds`, `images`, `video`, `priceBaja`, `priceMedia`, `priceAlta`, `priceEspeciales`, `code`, `category`, `type`, `visible`, `reservable`. Si no envías `priceBaja`, `priceMedia` ni `priceAlta`, se usa `priceBase` para todos. `visible` y `reservable` por defecto son `true`.
+
+**Requiere autenticación:** cookie `better-auth.convex_jwt` o header `Authorization: Bearer <jwt>` o `X-Auth-Token: <jwt>`. Usuario admin.
 
 ```bash
-curl -X POST "http://localhost:3001/api/fincas" \
+curl -X POST "{{base_url}}/api/fincas" \
+  -H "Cookie: better-auth.convex_jwt=TU_JWT" \
   -F "title=Villa Green 12 pax" \
   -F "description=Hermosa villa campestre ideal para 12 personas ubicada a 2 horas de Bogotá en Villavicencio" \
   -F "location=Villavicencio" \
@@ -63,7 +97,45 @@ curl -X POST "http://localhost:3001/api/fincas" \
   -F "images=@/ruta/imagen2.jpg" \
   -F "video=@/ruta/video.mp4" \
   -F 'pricing=[{"nombre":"Temporada Baja","fechaDesde":"2025-01-01","fechaHasta":"2025-06-30","valorUnico":1200000,"activa":true},{"nombre":"Temporada Alta","fechaDesde":"2025-07-01","fechaHasta":"2025-12-31","valorUnico":1500000,"activa":true}]' \
-  -F 'catalogIds=["m977kbc084b6rgbrxcnzakvw0581mmvv"]'
+  -F 'catalogIds=["m977kbc084b6rgbrxcnzakvw0581mmvv"]' \
+  -F "visible=true" \
+  -F "reservable=true"
+```
+
+**Editar finca (PUT):**
+
+```bash
+curl -X PUT "{{base_url}}/api/fincas/{propertyId}" \
+  -H "Cookie: better-auth.convex_jwt=TU_JWT" \
+  -F "title=CASA LOS OCOBOS (editada)" \
+  -F "description=Descripción actualizada" \
+  -F "location=Melgar" \
+  -F "capacity=12" \
+  -F "lat=4.142" \
+  -F "lng=-73.626" \
+  -F "priceBase=1500000" \
+  -F "priceBaja=1200000" \
+  -F "priceMedia=1200000" \
+  -F "priceAlta=1500000" \
+  -F "code=villa-green-12-pax-vc115" \
+  -F "category=ESTANDAR" \
+  -F "type=FINCA" \
+  -F "visible=true" \
+  -F "reservable=false"
+```
+
+O solo JSON (sin archivos):
+
+```bash
+curl -X PUT "{{base_url}}/api/fincas/{propertyId}" \
+  -H "Content-Type: application/json" \
+  -H "Cookie: better-auth.convex_jwt=TU_JWT" \
+  -d '{
+    "title": "CASA LOS OCOBOS (editada)",
+    "description": "Descripción actualizada",
+    "visible": true,
+    "reservable": false
+  }'
 ```
 
 **Variantes:**
@@ -72,13 +144,16 @@ curl -X POST "http://localhost:3001/api/fincas" \
 - **pricing:** opcional. JSON array `-F 'pricing=[{...}]'`
 - **catalogIds:** opcional. JSON array con `_id` de catálogos o ID de Meta. Primero llama `GET /api/catalogs`.
 - **code:** debe ser único. No se pueden crear dos fincas con el mismo código.
+- **visible:** opcional (`true`/`false`). Si la finca aparece en el catálogo público. Por defecto `true`.
+- **reservable:** opcional (`true`/`false`). Si se puede reservar desde la web. Por defecto `true`.
 
 ---
 
 ## 2. Crear finca mínima (solo priceBase, sin temporadas ni catálogos)
 
 ```bash
-curl -X POST "http://localhost:3001/api/fincas" \
+curl -X POST "{{base_url}}/api/fincas" \
+  -H "Cookie: better-auth.convex_jwt=TU_JWT" \
   -F "title=CASA LOS OCOBOS" \
   -F "description=Hermosa finca privada en Melgar" \
   -F "location=Melgar" \
@@ -89,6 +164,8 @@ curl -X POST "http://localhost:3001/api/fincas" \
   -F "category=ESTANDAR" \
   -F "type=FINCA" \
   -F 'features=["Piscina","Jacuzzi"]' \
+  -F "visible=true" \
+  -F "reservable=true" \
   -F "images=@/ruta/imagen.jpg"
 ```
 
@@ -101,8 +178,9 @@ Si solo envías `priceBase`, se usará para baja, media y alta. No hace falta en
 Si no subes imágenes ni video en el create, puedes enviar todo como JSON (ajustando `Content-Type`):
 
 ```bash
-curl -X POST "http://localhost:3001/api/fincas" \
+curl -X POST "{{base_url}}/api/fincas" \
   -H "Content-Type: application/json" \
+  -H "Cookie: better-auth.convex_jwt=TU_JWT" \
   -d '{
     "title": "Villa Green 12 pax",
     "description": "Hermosa villa campestre",
@@ -117,6 +195,8 @@ curl -X POST "http://localhost:3001/api/fincas" \
     "code": "villa-green-12-pax",
     "category": "ESTANDAR",
     "type": "FINCA",
+    "visible": true,
+    "reservable": true,
     "features": ["Piscina", "BBQ"],
     "pricing": [
       { "nombre": "Temporada Baja", "fechaDesde": "2025-01-01", "fechaHasta": "2025-06-30", "valorUnico": 1200000, "activa": true },

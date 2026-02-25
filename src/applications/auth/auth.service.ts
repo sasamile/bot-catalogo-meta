@@ -146,7 +146,8 @@ export class AuthService {
           cookies,
         });
         const data = result.data || result;
-        return this.ensureUserRoleInData(data);
+        const body = this.ensureUserRoleInData(data);
+        return { ...body, _headers: result.headers };
       } catch (error: any) {
         // Si Better Auth no tiene endpoint de sesión, usar Convex
         const cookieMatch = cookies.match(/better-auth\.convex_jwt=([^;]+)/);

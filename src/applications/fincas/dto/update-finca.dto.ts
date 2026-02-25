@@ -1,6 +1,6 @@
 import { PartialType } from '@nestjs/mapped-types';
 import { CreateFincaDto } from './create-finca.dto';
-import { IsOptional, IsString, IsNumber, IsEnum, Min } from 'class-validator';
+import { IsOptional, IsString, IsNumber, IsEnum, IsBoolean, Min } from 'class-validator';
 
 export class UpdateFincaDto extends PartialType(CreateFincaDto) {
   @IsOptional()
@@ -60,4 +60,12 @@ export class UpdateFincaDto extends PartialType(CreateFincaDto) {
   @IsOptional()
   @IsString()
   video?: string;
+
+  @IsOptional()
+  @IsBoolean()
+  visible?: boolean;
+
+  @IsOptional()
+  @IsBoolean()
+  reservable?: boolean;
 }

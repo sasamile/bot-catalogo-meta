@@ -161,8 +161,9 @@
           "request": {
             "method": "GET",
             "header": [],
+            "description": "Lista fincas visibles. Respuesta incluye hasMore, nextCursor, properties. Cada propiedad tiene visible y reservable (booleans).",
             "url": {
-              "raw": "{{base_url}}/api/fincas?limit=20&location=Girardot&minCapacity=10",
+              "raw": "{{base_url}}/api/fincas?limit=20",
               "host": ["{{base_url}}"],
               "path": ["api", "fincas"],
               "query": [
@@ -358,6 +359,18 @@
                   "type": "text"
                 },
                 {
+                  "key": "visible",
+                  "value": "true",
+                  "type": "text",
+                  "description": "Si la finca aparece en el catálogo (default true)"
+                },
+                {
+                  "key": "reservable",
+                  "value": "true",
+                  "type": "text",
+                  "description": "Si se puede reservar desde la web (default true)"
+                },
+                {
                   "key": "images",
                   "type": "file",
                   "src": []
@@ -389,6 +402,18 @@
                   "key": "title",
                   "value": "Finca La Esperanza Actualizada",
                   "type": "text"
+                },
+                {
+                  "key": "visible",
+                  "value": "true",
+                  "type": "text",
+                  "description": "Si la finca aparece en el catálogo"
+                },
+                {
+                  "key": "reservable",
+                  "value": "true",
+                  "type": "text",
+                  "description": "Si se puede reservar desde la web"
                 },
                 {
                   "key": "priceBase",

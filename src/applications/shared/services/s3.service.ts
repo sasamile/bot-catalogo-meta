@@ -1,5 +1,6 @@
 import { Injectable, BadRequestException } from '@nestjs/common';
-import { S3Client, PutObjectCommand, DeleteObjectCommand } from '@aws-sdk/client-s3';
+import { S3Client, PutObjectCommand, DeleteObjectCommand, GetObjectCommand } from '@aws-sdk/client-s3';
+import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 import { randomUUID } from 'crypto';
 
 @Injectable()
@@ -43,6 +44,24 @@ export class S3Service {
       return url;
     } catch (error) {
       throw new BadRequestException(`Error uploading file: ${error.message}`);
+    }
+  }
+
+  /**
+   * Genera una URL pre-firmada para descargar un archivo de S3.
+   * Útil cuando Convex u otros servicios externos necesitan acceder a archivos en buckets privados.
+   * @param key Clave del objeto (ej: "inbox/uuid.jpg")
+   * @param expiresIn Segundos de validez (default 15 min)
+   */
+  async getPresignedDownloadUrl(key: string, expiresIn = 900): Promise<string> {
+    try {
+      const command = new GetObjectCommand({
+        Bucket: this.bucketName,
+        Key: key,
+      });
+      return getSignedUrl(this.s3Client as any, command, { expiresIn });
+    } catch (error) {
+      throw new BadRequestException(`Error generando URL pre-firmada: ${error.message}`);
     }
   }
 

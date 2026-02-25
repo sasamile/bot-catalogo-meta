@@ -14,6 +14,12 @@ export class ConvexAuthGuard implements CanActivate {
       }
     }
 
+    // Fallback: header X-Auth-Token (útil cuando las cookies no se envían cross-origin)
+    const xToken = (req.headers['x-auth-token'] ?? req.headers['X-Auth-Token']) as string | undefined;
+    if (xToken && this.isValidTokenFormat(xToken.trim())) {
+      return true;
+    }
+
     const cookieHeader = (req.headers.cookie ?? (req.headers as any)['Cookie'] ?? '') as string;
     if (cookieHeader) {
       const pairs = cookieHeader.split(';').map((s) => s.trim());
@@ -33,7 +39,7 @@ export class ConvexAuthGuard implements CanActivate {
     }
 
     throw new UnauthorizedException(
-      'No autorizado. Inicia sesión para gestionar fincas. Envía la cookie better-auth.convex_jwt o un header Authorization: Bearer <jwt>.',
+      'No autorizado. Envía la cookie better-auth.convex_jwt, el header Authorization: Bearer <jwt> o X-Auth-Token: <jwt>. Si usas el navegador desde otro origen, incluye credentials: "include" en fetch.',
     );
   }
 

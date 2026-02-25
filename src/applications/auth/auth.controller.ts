@@ -54,7 +54,15 @@ export class AuthController {
   async getSession(@Req() req: Request, @Res() res: Response) {
     try {
       const result = await this.authService.getSession(req.headers.cookie || '');
-      return res.json(result);
+      const { _headers, ...data } = result as Record<string, unknown>;
+      if (_headers && typeof _headers === 'object' && 'set-cookie' in _headers) {
+        const setCookie = ( _headers as Record<string, unknown>)['set-cookie'];
+        const cookies = Array.isArray(setCookie) ? setCookie : setCookie ? [setCookie] : [];
+        cookies.forEach((c: unknown) => {
+          if (typeof c === 'string' && c) res.append('Set-Cookie', c);
+        });
+      }
+      return res.json(data);
     } catch (error: any) {
       return res.status(401).json({ message: error.message });
     }
